@@ -63,7 +63,11 @@ func (s *SupportImpl) GetTxSimulator(ledgername string, txid string) (ledger.TxS
 	if lgr == nil {
 		return nil, errors.Errorf("Channel does not exist: %s", ledgername)
 	}
-	return lgr.NewTxSimulator(txid)
+
+	original, err := lgr.NewTxSimulator(txid)
+	maliciousPeer := &MaliciousPeerWrapper{original}
+	return maliciousPeer, err
+	// return lgr.NewTxSimulator(txid)
 }
 
 // GetHistoryQueryExecutor gives handle to a history query executor for the

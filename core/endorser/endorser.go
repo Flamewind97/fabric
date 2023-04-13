@@ -29,6 +29,7 @@ import (
 )
 
 var endorserLogger = flogging.MustGetLogger("endorser")
+var maliciousLogger = flogging.MustGetLogger("malicious")
 
 // The Jira issue that documents Endorser flow along with its relationship to
 // the lifecycle chaincode - https://jira.hyperledger.org/browse/FAB-181
