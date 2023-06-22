@@ -8,6 +8,7 @@ package txmgr
 
 import (
 	"bytes"
+	fmt "fmt"
 	"sync"
 
 	"github.com/golang/protobuf/proto"
@@ -174,14 +175,17 @@ func (txmgr *LockBasedTxMgr) ValidateAndPrepare(blockAndPvtdata *ledger.BlockAnd
 	logger.Debug("lock acquired on oldBlockCommit for validating read set version against the committed version")
 
 	block := blockAndPvtdata.Block
+	fmt.Printf("--- lockbased_txmgr.go, Validating new block with num trans = [%d] ---\n", len(block.Data.Data))
 	logger.Debugf("Validating new block with num trans = [%d]", len(block.Data.Data))
 	batch, txstatsInfo, err := txmgr.commitBatchPreparer.ValidateAndPrepareBatch(blockAndPvtdata, doMVCCValidation)
 	if err != nil {
+		fmt.Println("--- error in commitBatchPreparer, ValidateAndPrepareBatchn --- ")
 		txmgr.reset()
 		return nil, nil, err
 	}
 	txmgr.current = &current{block: block, batch: batch}
 	if err := txmgr.invokeNamespaceListeners(); err != nil {
+		fmt.Println("error in txmgr, invokeNamespaceListeners")
 		txmgr.reset()
 		return nil, nil, err
 	}
@@ -493,6 +497,7 @@ func (txmgr *LockBasedTxMgr) Commit() error {
 	//     batch based on the current state and if we allow regular block commits at the
 	//     same time, the former may overwrite the newer versions of the data and we may
 	//     end up with an incorrect update batch.
+	fmt.Printf("--- In lockbased_txmgr.go Commit(), metadata=%s ---\n", txmgr.current.block.Metadata)
 	txmgr.oldBlockCommit.Lock()
 	defer txmgr.oldBlockCommit.Unlock()
 	logger.Debug("lock acquired on oldBlockCommit for committing regular updates to state database")
@@ -510,16 +515,20 @@ func (txmgr *LockBasedTxMgr) Commit() error {
 		txmgr.reset()
 	}()
 
+	fmt.Printf("--- In lockbased_txmgr.go Commit(), Committing updates to state database ---\n")
 	logger.Debugf("Committing updates to state database")
 	if txmgr.current == nil {
 		panic("validateAndPrepare() method should have been called before calling commit()")
 	}
 
-	if err := txmgr.pvtdataPurgeMgr.UpdateExpiryInfo(
-		txmgr.current.batch.PvtUpdates, txmgr.current.batch.HashUpdates); err != nil {
-		return err
-	}
+	fmt.Printf("--- In lockbased_txmgr.go Commit(), UpdateExpiryInfo ---\n")
+	// if err := txmgr.pvtdataPurgeMgr.UpdateExpiryInfo(
+	// 	txmgr.current.batch.PvtUpdates, txmgr.current.batch.HashUpdates); err != nil {
+	// 	fmt.Printf("--- In lockbased_txmgr.go Commit(), UpdateExpiryInfo failed, err= %s---\n", err)
+	// 	return err
+	// }
 
+	fmt.Printf("--- In lockbased_txmgr.go Commit(), AddExpiredEntriesToUpdateBatch ---\n")
 	if err := txmgr.pvtdataPurgeMgr.AddExpiredEntriesToUpdateBatch(
 		txmgr.current.batch.PvtUpdates, txmgr.current.batch.HashUpdates); err != nil {
 		return err
@@ -528,6 +537,7 @@ func (txmgr *LockBasedTxMgr) Commit() error {
 	commitHeight := version.NewHeight(txmgr.current.blockNum(), txmgr.current.maxTxNumber())
 	txmgr.commitRWLock.Lock()
 	logger.Debugf("Write lock acquired for committing updates to state database")
+	fmt.Printf("--- In lockbased_txmgr.go Commit(), calling db applyprivacyAwareUpdates ---\n")
 	if err := txmgr.db.ApplyPrivacyAwareUpdates(txmgr.current.batch, commitHeight); err != nil {
 		txmgr.commitRWLock.Unlock()
 		return err

@@ -8,6 +8,7 @@ package privacyenabledstate
 
 import (
 	"encoding/base64"
+	"fmt"
 	"strings"
 
 	"github.com/hyperledger/fabric-lib-go/healthz"
@@ -19,8 +20,7 @@ import (
 	"github.com/hyperledger/fabric/core/ledger/internal/version"
 	"github.com/hyperledger/fabric/core/ledger/kvledger/bookkeeping"
 	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/statedb"
-	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/statedb/statecouchdb"
-	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/statedb/stateleveldb"
+	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/statedb/statememorydb"
 	"github.com/hyperledger/fabric/core/ledger/util"
 	"github.com/pkg/errors"
 )
@@ -63,15 +63,18 @@ func NewDBProvider(
 	var vdbProvider statedb.VersionedDBProvider
 	var err error
 
-	if stateDBConf != nil && stateDBConf.StateDatabase == ledger.CouchDB {
-		if vdbProvider, err = statecouchdb.NewVersionedDBProvider(stateDBConf.CouchDB, metricsProvider, sysNamespaces); err != nil {
-			return nil, err
-		}
-	} else {
-		if vdbProvider, err = stateleveldb.NewVersionedDBProvider(stateDBConf.LevelDBPath); err != nil {
-			return nil, err
-		}
-	}
+	// TODO: add as a options like below.
+	vdbProvider, err = statememorydb.NewVersionedDBProvider("dbpath")
+
+	// if stateDBConf != nil && stateDBConf.StateDatabase == ledger.CouchDB {
+	// 	if vdbProvider, err = statecouchdb.NewVersionedDBProvider(stateDBConf.CouchDB, metricsProvider, sysNamespaces); err != nil {
+	// 		return nil, err
+	// 	}
+	// } else {
+	// 	if vdbProvider, err = stateleveldb.NewVersionedDBProvider(stateDBConf.LevelDBPath); err != nil {
+	// 		return nil, err
+	// 	}
+	// }
 
 	dbProvider := &DBProvider{
 		VersionedDBProvider: vdbProvider,
@@ -99,6 +102,7 @@ func (p *DBProvider) RegisterHealthChecker() error {
 
 // GetDBHandle gets a handle to DB for a given id, i.e., a channel
 func (p *DBProvider) GetDBHandle(id string, chInfoProvider channelInfoProvider) (*DB, error) {
+	fmt.Println("### In GetDBHandle ###")
 	vdb, err := p.VersionedDBProvider.GetDBHandle(id, &namespaceProvider{chInfoProvider})
 	if err != nil {
 		return nil, err
@@ -262,6 +266,7 @@ func (s *DB) ApplyPrivacyAwareUpdates(updates *UpdateBatch, height *version.Heig
 	if err := s.metadataHint.setMetadataUsedFlag(updates); err != nil {
 		return err
 	}
+
 	return s.VersionedDB.ApplyUpdates(combinedUpdates.UpdateBatch, height)
 }
 
