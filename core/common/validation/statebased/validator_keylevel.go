@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package statebased
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/hyperledger/fabric-protos-go/common"
@@ -36,6 +37,7 @@ type baseEvaluator struct {
 
 func (p *baseEvaluator) checkSBAndCCEP(cc, coll, key string, blockNum, txNum uint64, signatureSet []*protoutil.SignedData) commonerrors.TxValidationError {
 	// see if there is a key-level validation parameter for this key
+	fmt.Println("--- in validator_keylevel.go checkSBAndCCEP ---")
 	vp, err := p.vpmgr.GetValidationParameterForKey(cc, coll, key, blockNum, txNum)
 	if err != nil {
 		// error handling for GetValidationParameterForKey follows this rationale:
@@ -85,7 +87,9 @@ func (p *baseEvaluator) checkSBAndCCEP(cc, coll, key string, blockNum, txNum uin
 
 func (p *baseEvaluator) Evaluate(blockNum, txNum uint64, NsRwSets []*rwsetutil.NsRwSet, ns string, sd []*protoutil.SignedData) commonerrors.TxValidationError {
 	// iterate over all writes in the rwset
+	fmt.Printf("--- in validator_keylevel.go Evaluate, blockNum %d, txNum %d, ns %s---\n", blockNum, txNum, ns)
 	for _, nsRWSet := range NsRwSets {
+		fmt.Printf("namespace: %v, read: %v, writes: %v\n", nsRWSet.NameSpace, nsRWSet.KvRwSet.Reads, nsRWSet.KvRwSet.Writes)
 		// skip other namespaces
 		if nsRWSet.NameSpace != ns {
 			continue
@@ -242,6 +246,7 @@ func (klv *KeyLevelValidator) PreValidate(txNum uint64, block *common.Block) {
 // Validate implements the function of the StateBasedValidator interface
 func (klv *KeyLevelValidator) Validate(cc string, blockNum, txNum uint64, rwsetBytes, prp, ccEP []byte, endorsements []*peer.Endorsement) commonerrors.TxValidationError {
 	// construct signature set
+	fmt.Println("--- in validator_keylevel.go Validate ---")
 	signatureSet := []*protoutil.SignedData{}
 	for _, endorsement := range endorsements {
 		data := make([]byte, len(prp)+len(endorsement.Endorser))
@@ -265,7 +270,6 @@ func (klv *KeyLevelValidator) Validate(cc string, blockNum, txNum uint64, rwsetB
 	if err := rwset.FromProtoBytes(rwsetBytes); err != nil {
 		return policyErr(errors.WithMessagef(err, "txRWSet.FromProtoBytes failed on tx (%d,%d)", blockNum, txNum))
 	}
-
 	// return the decision of the policy evaluator
 	return policyEvaluator.Evaluate(blockNum, txNum, rwset.NsRwSets, cc, signatureSet)
 }

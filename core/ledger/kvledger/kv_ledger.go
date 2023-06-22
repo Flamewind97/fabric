@@ -464,8 +464,8 @@ func (l *kvLedger) filterYetToCommitBlocks(blocksPvtData map[uint64][]*ledger.Tx
 	return nil
 }
 
-//recommitLostBlocks retrieves blocks in specified range and commit the write set to either
-//state DB or history DB or both
+// recommitLostBlocks retrieves blocks in specified range and commit the write set to either
+// state DB or history DB or both
 func (l *kvLedger) recommitLostBlocks(firstBlockNum uint64, lastBlockNum uint64, recoverables ...recoverable) error {
 	logger.Infof("Recommitting lost blocks - firstBlockNum=%d, lastBlockNum=%d, recoverables=%#v", firstBlockNum, lastBlockNum, recoverables)
 	var err error
@@ -601,6 +601,7 @@ func (l *kvLedger) CommitLegacy(pvtdataAndBlock *ledger.BlockAndPvtData, commitO
 
 // commit commits the block and the corresponding pvt data in an atomic operation.
 func (l *kvLedger) commit(pvtdataAndBlock *ledger.BlockAndPvtData, commitOpts *ledger.CommitOptions) error {
+	fmt.Printf("--- In kvledger/kv_ledger.go commit ---\n")
 	var err error
 	block := pvtdataAndBlock.Block
 	blockNo := pvtdataAndBlock.Block.Header.Number
@@ -626,14 +627,17 @@ func (l *kvLedger) commit(pvtdataAndBlock *ledger.BlockAndPvtData, commitOpts *l
 		pvtdataAndBlock.PvtData = convertTxPvtDataArrayToMap(txPvtData)
 	}
 
+	fmt.Printf("---[%s] Validating state for block [%d]---\n", l.ledgerID, blockNo)
 	logger.Debugf("[%s] Validating state for block [%d]", l.ledgerID, blockNo)
 	txstatsInfo, updateBatchBytes, err := l.txmgr.ValidateAndPrepare(pvtdataAndBlock, true)
 	if err != nil {
+		fmt.Printf("---Err: %s---\n", err)
 		return err
 	}
 	elapsedBlockProcessing := time.Since(startBlockProcessing)
 
 	startBlockstorageAndPvtdataCommit := time.Now()
+	fmt.Printf("---[%s] Adding CommitHash to the block [%d]---\n", l.ledgerID, blockNo)
 	logger.Debugf("[%s] Adding CommitHash to the block [%d]", l.ledgerID, blockNo)
 	// we need to ensure that only after a genesis block, commitHash is computed
 	// and added to the block. In other words, only after joining a new channel
@@ -642,6 +646,7 @@ func (l *kvLedger) commit(pvtdataAndBlock *ledger.BlockAndPvtData, commitOpts *l
 		l.addBlockCommitHash(pvtdataAndBlock.Block, updateBatchBytes)
 	}
 
+	fmt.Printf("---[%s] Committing pvtdata and block [%d] to storage---\n", l.ledgerID, blockNo)
 	logger.Debugf("[%s] Committing pvtdata and block [%d] to storage", l.ledgerID, blockNo)
 	l.blockAPIsRWLock.Lock()
 	defer l.blockAPIsRWLock.Unlock()
@@ -651,6 +656,7 @@ func (l *kvLedger) commit(pvtdataAndBlock *ledger.BlockAndPvtData, commitOpts *l
 	elapsedBlockstorageAndPvtdataCommit := time.Since(startBlockstorageAndPvtdataCommit)
 
 	startCommitState := time.Now()
+	fmt.Printf("---[%s] Committing block [%d] transactions to state database---\n", l.ledgerID, blockNo)
 	logger.Debugf("[%s] Committing block [%d] transactions to state database", l.ledgerID, blockNo)
 	if err = l.txmgr.Commit(); err != nil {
 		panic(errors.WithMessage(err, "error during commit to txmgr"))
@@ -666,6 +672,15 @@ func (l *kvLedger) commit(pvtdataAndBlock *ledger.BlockAndPvtData, commitOpts *l
 		}
 	}
 
+	fmt.Printf("--- [%s] Committed block [%d] with %d transaction(s) in %dms (state_validation=%dms block_and_pvtdata_commit=%dms state_commit=%dms)"+
+		" commitHash=[%x] ---",
+		l.ledgerID, block.Header.Number, len(block.Data.Data),
+		time.Since(startBlockProcessing)/time.Millisecond,
+		elapsedBlockProcessing/time.Millisecond,
+		elapsedBlockstorageAndPvtdataCommit/time.Millisecond,
+		elapsedCommitState/time.Millisecond,
+		l.commitHash,
+	)
 	logger.Infof("[%s] Committed block [%d] with %d transaction(s) in %dms (state_validation=%dms block_and_pvtdata_commit=%dms state_commit=%dms)"+
 		" commitHash=[%x]",
 		l.ledgerID, block.Header.Number, len(block.Data.Data),
@@ -812,9 +827,12 @@ func (l *kvLedger) GetPvtDataByNum(blockNum uint64, filter ledger.PvtNsCollFilte
 // DoesPvtDataInfoExist returns true when
 // (1) the ledger has pvtdata associated with the given block number (or)
 // (2) a few or all pvtdata associated with the given block number is missing but the
-//     missing info is recorded in the ledger (or)
+//
+//	missing info is recorded in the ledger (or)
+//
 // (3) the block is committed but it does not contain even a single
-//     transaction with pvtData.
+//
+//	transaction with pvtData.
 func (l *kvLedger) DoesPvtDataInfoExist(blockNum uint64) (bool, error) {
 	pvtStoreHt, err := l.pvtdataStore.LastCommittedBlockHeight()
 	if err != nil {
@@ -923,8 +941,10 @@ type collectionInfoRetriever struct {
 }
 
 func (r *collectionInfoRetriever) CollectionInfo(chaincodeName, collectionName string) (*peer.StaticCollectionConfig, error) {
+	fmt.Printf("--- In kv_ledger.go, CollectionInfo ---\n")
 	qe, err := r.ledger.NewQueryExecutor()
 	if err != nil {
+		fmt.Printf("--- In kv_ledger.go, CollectionInfo err=%s ---\n", err)
 		return nil, err
 	}
 	defer qe.Done()

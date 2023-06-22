@@ -47,6 +47,7 @@ type TransactionValidator interface {
 }
 
 func (v *DefaultValidation) Validate(block *common.Block, namespace string, txPosition int, actionPosition int, contextData ...validation.ContextDatum) error {
+	fmt.Println("--- in builtin/default_validation.go Validate---")
 	if len(contextData) == 0 {
 		logger.Panicf("Expected to receive policy bytes in context data")
 	}

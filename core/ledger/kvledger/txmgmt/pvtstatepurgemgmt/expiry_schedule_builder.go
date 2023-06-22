@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package pvtstatepurgemgmt
 
 import (
+	fmt "fmt"
 	math "math"
 
 	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/privacyenabledstate"
@@ -25,12 +26,15 @@ func newExpiryScheduleBuilder(btlPolicy pvtdatapolicy.BTLPolicy) *expirySchedule
 }
 
 func (builder *expiryScheduleBuilder) add(ns, coll, key string, keyHash []byte, versionedValue *statedb.VersionedValue) error {
+	fmt.Printf("--- In expiry_schedule_builder.go, add ---\n")
 	committingBlk := versionedValue.Version.BlockNum
 	expiryBlk, err := builder.btlPolicy.GetExpiringBlock(ns, coll, committingBlk)
 	if err != nil {
+		fmt.Printf("--- In expiry_schedule_builder.go, getExpiringBlock failed, err %s---\n", err)
 		return err
 	}
 	if isDelete(versionedValue) || neverExpires(expiryBlk) {
+		fmt.Printf("--- In expiry_schedule_builder.go, isDelete or neverExpires failed, err %s---\n", err)
 		return nil
 	}
 	expinfoKey := expiryInfoKey{committingBlk: committingBlk, expiryBlk: expiryBlk}
@@ -39,11 +43,13 @@ func (builder *expiryScheduleBuilder) add(ns, coll, key string, keyHash []byte, 
 		pvtdataKeys = newPvtdataKeys()
 		builder.scheduleEntries[expinfoKey] = pvtdataKeys
 	}
+	fmt.Printf("--- In expiry_schedule_builder.go, pvtdataKeys.add, ok = %t ---\n", ok)
 	pvtdataKeys.add(ns, coll, key, keyHash)
 	return nil
 }
 
 func (builder *expiryScheduleBuilder) getExpiryInfo() []*expiryInfo {
+	fmt.Printf("--- In expiry_schedule_builder.go, getExpiryInfo ---\n")
 	var listExpinfo []*expiryInfo
 	for expinfoKey, pvtdataKeys := range builder.scheduleEntries {
 		expinfoKeyCopy := expinfoKey
@@ -57,6 +63,7 @@ func buildExpirySchedule(
 	pvtUpdates *privacyenabledstate.PvtUpdateBatch,
 	hashedUpdates *privacyenabledstate.HashedUpdateBatch) ([]*expiryInfo, error) {
 
+	fmt.Printf("--- In expiry_schedule_builder.go, buildExpirySchedule ---\n")
 	hashedUpdateKeys := hashedUpdates.ToCompositeKeyMap()
 	expiryScheduleBuilder := newExpiryScheduleBuilder(btlPolicy)
 
@@ -76,6 +83,7 @@ func buildExpirySchedule(
 		}
 		logger.Debugf("Adding expiry schedule for key and key hash [%s]", &hashedCompisiteKey)
 		if err := expiryScheduleBuilder.add(pvtUpdateKey.Namespace, pvtUpdateKey.CollectionName, pvtUpdateKey.Key, keyHash, vv); err != nil {
+			fmt.Printf("--- In expiry_schedule_builder.go, buildExpirySchedule, pvtUpdates expiryScheduleBuilder add failed, err %s ---\n", err)
 			return nil, err
 		}
 		delete(hashedUpdateKeys, hashedCompisiteKey)
@@ -85,6 +93,7 @@ func buildExpirySchedule(
 	for hashedUpdateKey, vv := range hashedUpdateKeys {
 		logger.Debugf("Adding expiry schedule for key hash [%s]", &hashedUpdateKey)
 		if err := expiryScheduleBuilder.add(hashedUpdateKey.Namespace, hashedUpdateKey.CollectionName, "", []byte(hashedUpdateKey.KeyHash), vv); err != nil {
+			fmt.Printf("--- In expiry_schedule_builder.go, buildExpirySchedule, hashedUpdateKeys expiryScheduleBuilder add failed, err %s ---\n", err)
 			return nil, err
 		}
 	}

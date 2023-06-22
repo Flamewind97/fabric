@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package validation
 
 import (
+	"fmt"
+
 	"github.com/hyperledger/fabric-protos-go/ledger/rwset/kvrwset"
 	"github.com/hyperledger/fabric-protos-go/peer"
 	"github.com/hyperledger/fabric/core/ledger/internal/version"
@@ -92,9 +94,11 @@ func (v *validator) validateAndPrepareBatch(blk *block, doMVCCValidation bool) (
 
 	updates := newPubAndHashUpdates()
 	for _, tx := range blk.txs {
+		fmt.Println("-- txmgmt validator.go, validate blk txs ---")
 		var validationCode peer.TxValidationCode
 		var err error
 		if validationCode, err = v.validateEndorserTX(tx.rwset, doMVCCValidation, updates); err != nil {
+			fmt.Printf("-- txmgmt validator.go, validateEndorserTX failed, err = %s---\n", err)
 			return nil, err
 		}
 
@@ -103,6 +107,7 @@ func (v *validator) validateAndPrepareBatch(blk *block, doMVCCValidation bool) (
 			logger.Debugf("Block [%d] Transaction index [%d] TxId [%s] marked as valid by state validator. ContainsPostOrderWrites [%t]", blk.num, tx.indexInBlock, tx.id, tx.containsPostOrderWrites)
 			committingTxHeight := version.NewHeight(blk.num, uint64(tx.indexInBlock))
 			if err := updates.applyWriteSet(tx.rwset, committingTxHeight, v.db, tx.containsPostOrderWrites); err != nil {
+				fmt.Printf("-- txmgmt validator.go, applyWriteSet failed, err = %s---\n", err)
 				return nil, err
 			}
 		} else {
@@ -133,16 +138,20 @@ func (v *validator) validateTx(txRWSet *rwsetutil.TxRwSet, updates *publicAndHas
 	//logger.Debugf("validateTx - validating txRWSet: %s", spew.Sdump(txRWSet))
 	for _, nsRWSet := range txRWSet.NsRwSets {
 		ns := nsRWSet.NameSpace
+		fmt.Printf("--- txmgmt validator.go, validateTx, ns= %s ---\n", ns)
 		// Validate public reads
 		if valid, err := v.validateReadSet(ns, nsRWSet.KvRwSet.Reads, updates.publicUpdates); !valid || err != nil {
 			if err != nil {
+				fmt.Printf("--- txmgmt validator.go, validateReadSet failed, err=%v ---\n", err)
 				return peer.TxValidationCode(-1), err
 			}
 			return peer.TxValidationCode_MVCC_READ_CONFLICT, nil
 		}
 		// Validate range queries for phantom items
+		fmt.Println("--- txmgmt, validator.go, validateRangeQueries,rangeQueriesInfo: ", nsRWSet.KvRwSet.RangeQueriesInfo, "---")
 		if valid, err := v.validateRangeQueries(ns, nsRWSet.KvRwSet.RangeQueriesInfo, updates.publicUpdates); !valid || err != nil {
 			if err != nil {
+				fmt.Printf("--- txmgmt validator.go, validateRangeQueries failed, err=%v ---\n", err)
 				return peer.TxValidationCode(-1), err
 			}
 			return peer.TxValidationCode_PHANTOM_READ_CONFLICT, nil
@@ -150,6 +159,7 @@ func (v *validator) validateTx(txRWSet *rwsetutil.TxRwSet, updates *publicAndHas
 		// Validate hashes for private reads
 		if valid, err := v.validateNsHashedReadSets(ns, nsRWSet.CollHashedRwSets, updates.hashUpdates); !valid || err != nil {
 			if err != nil {
+				fmt.Printf("--- txmgmt validator.go, validateNsHashedReadSets failed, err=%v ---\n", err)
 				return peer.TxValidationCode(-1), err
 			}
 			return peer.TxValidationCode_MVCC_READ_CONFLICT, nil
@@ -158,10 +168,11 @@ func (v *validator) validateTx(txRWSet *rwsetutil.TxRwSet, updates *publicAndHas
 	return peer.TxValidationCode_VALID, nil
 }
 
-////////////////////////////////////////////////////////////////////////////////
-/////                 Validation of public read-set
-////////////////////////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////////////////////////
+// ///                 Validation of public read-set
+// //////////////////////////////////////////////////////////////////////////////
 func (v *validator) validateReadSet(ns string, kvReads []*kvrwset.KVRead, updates *privacyenabledstate.PubUpdateBatch) (bool, error) {
+	fmt.Printf("--- txmgmt validator.go, validateReadSet, ns=%s, kvReads=%v ---\n", ns, kvReads)
 	for _, kvRead := range kvReads {
 		if valid, err := v.validateKVRead(ns, kvRead, updates); !valid || err != nil {
 			return valid, err
@@ -174,6 +185,7 @@ func (v *validator) validateReadSet(ns string, kvReads []*kvrwset.KVRead, update
 // i.e., it checks whether a key/version combination is already updated in the statedb (by an already committed block)
 // or in the updates (by a preceding valid transaction in the current block)
 func (v *validator) validateKVRead(ns string, kvRead *kvrwset.KVRead, updates *privacyenabledstate.PubUpdateBatch) (bool, error) {
+	fmt.Printf("--- txmgmt validator.go, validateKVRead, ns=%s, kvRead=%v ---\n", ns, kvRead)
 	if updates.Exists(ns, kvRead.Key) {
 		return false, nil
 	}
@@ -192,9 +204,9 @@ func (v *validator) validateKVRead(ns string, kvRead *kvrwset.KVRead, updates *p
 	return true, nil
 }
 
-////////////////////////////////////////////////////////////////////////////////
-/////                 Validation of range queries
-////////////////////////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////////////////////////
+// ///                 Validation of range queries
+// //////////////////////////////////////////////////////////////////////////////
 func (v *validator) validateRangeQueries(ns string, rangeQueriesInfo []*kvrwset.RangeQueryInfo, updates *privacyenabledstate.PubUpdateBatch) (bool, error) {
 	for _, rqi := range rangeQueriesInfo {
 		if valid, err := v.validateRangeQuery(ns, rqi, updates); !valid || err != nil {
@@ -236,9 +248,9 @@ func (v *validator) validateRangeQuery(ns string, rangeQueryInfo *kvrwset.RangeQ
 	return qv.validate()
 }
 
-////////////////////////////////////////////////////////////////////////////////
-/////                 Validation of hashed read-set
-////////////////////////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////////////////////////
+// ///                 Validation of hashed read-set
+// //////////////////////////////////////////////////////////////////////////////
 func (v *validator) validateNsHashedReadSets(ns string, collHashedRWSets []*rwsetutil.CollHashedRwSet,
 	updates *privacyenabledstate.HashedUpdateBatch) (bool, error) {
 	for _, collHashedRWSet := range collHashedRWSets {

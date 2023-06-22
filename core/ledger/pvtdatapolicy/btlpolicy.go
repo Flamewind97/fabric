@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package pvtdatapolicy
 
 import (
+	"fmt"
 	"math"
 	"sync"
 
@@ -48,6 +49,7 @@ func ConstructBTLPolicy(collInfoProvider collectionInfoProvider) BTLPolicy {
 
 // GetBTL implements corresponding function in interface `BTLPolicyMgr`
 func (p *LSCCBasedBTLPolicy) GetBTL(namesapce string, collection string) (uint64, error) {
+	fmt.Printf("--- In btlpolicy.go, GetBTL ---\n")
 	var btl uint64
 	var ok bool
 	key := btlkey{namesapce, collection}
@@ -57,9 +59,11 @@ func (p *LSCCBasedBTLPolicy) GetBTL(namesapce string, collection string) (uint64
 	if !ok {
 		collConfig, err := p.collInfoProvider.CollectionInfo(namesapce, collection)
 		if err != nil {
+			fmt.Printf("--- In btlpolicy.go, collectionInfo failed err %s ---\n", err)
 			return 0, err
 		}
 		if collConfig == nil {
+			fmt.Printf("--- In btlpolicy.go, no such collection error ---\n")
 			return 0, privdata.NoSuchCollectionError{Namespace: namesapce, Collection: collection}
 		}
 		btlConfigured := collConfig.BlockToLive
@@ -75,6 +79,7 @@ func (p *LSCCBasedBTLPolicy) GetBTL(namesapce string, collection string) (uint64
 
 // GetExpiringBlock implements function from the interface `BTLPolicy`
 func (p *LSCCBasedBTLPolicy) GetExpiringBlock(namesapce string, collection string, committingBlock uint64) (uint64, error) {
+	fmt.Printf("--- In btlpolicy.go, getExpiringBlock---\n")
 	btl, err := p.GetBTL(namesapce, collection)
 	if err != nil {
 		return 0, err

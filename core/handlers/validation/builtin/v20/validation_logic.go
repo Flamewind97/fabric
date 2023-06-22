@@ -189,6 +189,7 @@ func (vscc *Validator) Validate(
 	actionPosition int,
 	policyBytes []byte,
 ) commonerrors.TxValidationError {
+	fmt.Println("--- in builtin/v20/ validation_logic.go validate---")
 	vscc.stateBasedValidator.PreValidate(uint64(txPosition), block)
 
 	va, err := vscc.extractValidationArtifacts(block, txPosition, actionPosition)

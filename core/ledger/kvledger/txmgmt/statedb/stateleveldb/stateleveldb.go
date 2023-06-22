@@ -8,6 +8,7 @@ package stateleveldb
 
 import (
 	"bytes"
+	"fmt"
 
 	"github.com/hyperledger/fabric/common/flogging"
 	"github.com/hyperledger/fabric/common/ledger/dataformat"
@@ -59,6 +60,7 @@ func (provider *VersionedDBProvider) ImportFromSnapshot(
 	savepoint *version.Height,
 	itr statedb.FullScanIterator,
 ) error {
+	fmt.Printf("--- In stateleveldb/stateleveldb.go/ImportFromSnapshot, dbname=%s, savepoint=%v ---\n", dbName, savepoint)
 	vdb := newVersionedDB(provider.dbProvider.GetDBHandle(dbName), dbName)
 	return vdb.importState(itr, savepoint)
 }
@@ -115,6 +117,7 @@ func (vdb *versionedDB) BytesKeySupported() bool {
 func (vdb *versionedDB) GetState(namespace string, key string) (*statedb.VersionedValue, error) {
 	logger.Debugf("GetState(). ns=%s, key=%s", namespace, key)
 	dbVal, err := vdb.db.Get(encodeDataKey(namespace, key))
+	fmt.Printf("--- In stateleveldb/stateleveldb.go/GetState, ns=%s, key=%s encodekey=%sx---\n", namespace, key, encodeDataKey(namespace, key))
 	if err != nil {
 		return nil, err
 	}
@@ -183,12 +186,14 @@ func (vdb *versionedDB) ExecuteQueryWithPagination(namespace, query, bookmark st
 
 // ApplyUpdates implements method in VersionedDB interface
 func (vdb *versionedDB) ApplyUpdates(batch *statedb.UpdateBatch, height *version.Height) error {
+	fmt.Printf("--- In stateleveldb/stateleveldb.go/ApplyUpdates, height=%s ---\n", height)
 	dbBatch := vdb.db.NewUpdateBatch()
 	namespaces := batch.GetUpdatedNamespaces()
 	for _, ns := range namespaces {
 		updates := batch.GetUpdates(ns)
 		for k, vv := range updates {
 			dataKey := encodeDataKey(ns, k)
+			fmt.Printf("--- store: ns=%s, key=%s, datakey=%x ---\n", ns, k, dataKey)
 			logger.Debugf("Channel [%s]: Applying key(string)=[%s] key(bytes)=[%#v]", vdb.dbName, string(dataKey), dataKey)
 
 			if vv.Value == nil {
