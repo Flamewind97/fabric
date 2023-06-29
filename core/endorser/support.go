@@ -65,8 +65,10 @@ func (s *SupportImpl) GetTxSimulator(ledgername string, txid string) (ledger.TxS
 	}
 
 	original, err := lgr.NewTxSimulator(txid)
-	maliciousPeer := &MaliciousPeerWrapper{original}
-	return maliciousPeer, err
+	merklePeer := &MerklePeerWrapper{original}
+	return merklePeer, err
+	// maliciousPeer := &MaliciousPeerWrapper{original}
+	// return maliciousPeer, err
 	// return lgr.NewTxSimulator(txid)
 }
 
