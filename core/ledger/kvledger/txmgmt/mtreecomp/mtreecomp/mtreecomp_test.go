@@ -14,7 +14,7 @@ import (
 
 func Setup(t *testing.T) *MerkleTreeComponent {
 	// Noted that the merkle tree component will be only create once in all the test.
-	mtci, err := GetMerkleTreeComponent()
+	mtci, err := NewMerkleTreeComponent()
 	require.NoError(t, err)
 	fmt.Println("finish create component")
 

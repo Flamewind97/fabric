@@ -23,13 +23,14 @@ func GetMerkleTreeComponent() (*MerkleTreeComponent, error) {
 	if merkleComponentInstance == nil {
 		once.Do(
 			func() {
-				merkleComponentInstance, err = newMerkleTreeComponent()
+				merkleComponentInstance, err = NewMerkleTreeComponent()
+				ServeMerkle("0.0.0.0:12345", merkleComponentInstance)
 			})
 	}
 	return merkleComponentInstance, err
 }
 
-func newMerkleTreeComponent() (*MerkleTreeComponent, error) {
+func NewMerkleTreeComponent() (*MerkleTreeComponent, error) {
 	return &MerkleTreeComponent{
 		mapMTree:      make(map[string]types.MerkleTree),
 		newMerkleTree: mtreeimpl.NewMerkleTreeCbergoon,

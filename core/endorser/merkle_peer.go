@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package endorser
 
 import (
+	"encoding/json"
 	"fmt"
 
 	commonledger "github.com/hyperledger/fabric/common/ledger"
@@ -20,9 +21,17 @@ type MerklePeerWrapper struct {
 	txSimulator ledger.TxSimulator
 }
 
+type MerkleValue struct {
+	Value      []byte
+	Merklepath []types.MerklePath
+}
+
 // GetState gets the value for given namespace and key. For a chaincode, the namespace corresponds to the chaincodeId
 func (m *MerklePeerWrapper) GetState(namespace string, key string) ([]byte, error) {
 	value, err := m.txSimulator.GetState(namespace, key)
+	if namespace != "fpc-secret-keeper-go" {
+		return value, err
+	}
 	if value == nil || err != nil {
 		return nil, err
 	}
@@ -39,9 +48,18 @@ func (m *MerklePeerWrapper) GetState(namespace string, key string) ([]byte, erro
 		return nil, errors.New(fmt.Sprintf("Merkle Tree Verify Content not valid, ns: %v, content: %v", namespace, c))
 	}
 	mpath, err := mtc.GetMerklePath(namespace, c)
+	if err != nil {
+		return nil, err
+	}
 	fmt.Printf("namespace: %s, key: %s, Merkle Path: %v", namespace, key, mpath)
-	// TODO: add merkle path into the return value.
-	return value, err
+
+	// Add merkle path into the return value.
+	mv := MerkleValue{
+		Value:      value,
+		Merklepath: mpath,
+	}
+	byteMv, err := json.Marshal(mv)
+	return byteMv, err
 }
 
 // GetStateRangeScanIterator returns an iterator that contains all the key-values between given key ranges.
