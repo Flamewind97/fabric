@@ -39,7 +39,7 @@ func NewMerkleTreeComponent() (*MerkleTreeComponent, error) {
 
 func (m *MerkleTreeComponent) GetMerkleRoot(ns string) ([]byte, error) {
 	mtree, found := m.mapMTree[ns]
-	if found != true {
+	if !found {
 		return nil, nil
 	}
 	return mtree.GetMerkleRoot(), nil
@@ -47,7 +47,7 @@ func (m *MerkleTreeComponent) GetMerkleRoot(ns string) ([]byte, error) {
 
 func (m *MerkleTreeComponent) GetMerklePath(ns string, content types.KVScontent) ([]types.MerklePath, error) {
 	mtree, found := m.mapMTree[ns]
-	if found != true {
+	if !found {
 		return nil, nil
 	}
 	return mtree.GetMerklePath(content)
@@ -55,7 +55,7 @@ func (m *MerkleTreeComponent) GetMerklePath(ns string, content types.KVScontent)
 
 func (m *MerkleTreeComponent) VerifyContent(ns string, content types.KVScontent) (bool, error) {
 	mtree, found := m.mapMTree[ns]
-	if found != true {
+	if !found {
 		return found, nil
 	}
 	return mtree.VerifyContent(content)
