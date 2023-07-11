@@ -75,6 +75,7 @@ func (s *MerkleRest) getMerkleRootHandler(w http.ResponseWriter, r *http.Request
 }
 
 func ServeMerkle(listenAddress string, mtci *MerkleTreeComponent) {
+	fmt.Printf("=== Start to server merkle http at address %s ===\n", listenAddress)
 	s := &MerkleRest{mtci: mtci}
 	http.HandleFunc("/merkleRoot", s.getMerkleRootHandler)
 	// Start the HTTP server

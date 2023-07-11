@@ -1,12 +1,16 @@
 package mtreecomp
 
 import (
+	"fmt"
+	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/hyperledger/fabric/core/ledger/internal/version"
 	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/mtreecomp/mtreeimpl"
 	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/mtreecomp/types"
 	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/statedb"
+	"github.com/spf13/viper"
 )
 
 type MerkleTreeComponent struct {
@@ -24,7 +28,14 @@ func GetMerkleTreeComponent() (*MerkleTreeComponent, error) {
 		once.Do(
 			func() {
 				merkleComponentInstance, err = NewMerkleTreeComponent()
-				ServeMerkle("0.0.0.0:12345", merkleComponentInstance)
+
+				// serve http server.
+				peerAddr := viper.GetString("peer.listenAddress")
+				peerPort := strings.Split(peerAddr, ":")[1]
+				portnum, _ := strconv.Atoi(peerPort)
+				portnum += 1000
+				httpAddr := "0.0.0.0:" + strconv.Itoa(portnum)
+				go ServeMerkle(httpAddr, merkleComponentInstance)
 			})
 	}
 	return merkleComponentInstance, err
@@ -62,6 +73,7 @@ func (m *MerkleTreeComponent) VerifyContent(ns string, content types.KVScontent)
 }
 
 func (m *MerkleTreeComponent) ApplyUpdates(batch *statedb.UpdateBatch, height *version.Height) error {
+	fmt.Printf("=== MerkleTreeComponent, ApplyUpdates, height=%v, batch=%v ===\n", height, batch)
 	namespaces := batch.GetUpdatedNamespaces()
 	for _, ns := range namespaces {
 		mtree, found := m.mapMTree[ns]

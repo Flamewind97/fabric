@@ -3,6 +3,7 @@ package mtreeimpl
 import (
 	"bytes"
 	"errors"
+	"sort"
 
 	mtc "github.com/cbergoon/merkletree"
 	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/mtreecomp/types"
@@ -73,7 +74,7 @@ func (m *MerkleTreeCbergoon) GetMerkleRoot() []byte {
 
 func (m *MerkleTreeCbergoon) GetMerklePath(content types.KVScontent) ([]types.MerklePath, error) {
 	mtcc, found := m.ContentMap[content.Key]
-	if found == false {
+	if !found {
 		return []types.MerklePath{}, nil
 	}
 
@@ -92,12 +93,12 @@ func (m *MerkleTreeCbergoon) GetMerklePath(content types.KVScontent) ([]types.Me
 
 func (m *MerkleTreeCbergoon) VerifyContent(content types.KVScontent) (bool, error) {
 	mtcc, found := m.ContentMap[content.Key]
-	if found == false {
+	if !found {
 		return false, nil
 	}
 
 	valid, err := mtcc.Equals(m.convertContent(content))
-	if err != nil || valid != true {
+	if err != nil || !valid {
 		return valid, err
 	}
 
@@ -120,7 +121,7 @@ func (m *MerkleTreeCbergoon) Add(content types.KVScontent) error {
 
 func (m *MerkleTreeCbergoon) Delete(content types.KVScontent) error {
 	_, found := m.ContentMap[content.Key]
-	if found == true {
+	if found {
 		delete(m.ContentMap, content.Key)
 		t, err := mtc.NewTree(m.buildContentFromMap())
 		m.mtc = t
@@ -141,9 +142,16 @@ func (m *MerkleTreeCbergoon) convertContent(c types.KVScontent) mtc.Content {
 }
 
 func (m *MerkleTreeCbergoon) buildContentFromMap() []mtc.Content {
+	// sort keys to make the result consistent
+	keys := make([]string, 0)
+	for k := range m.ContentMap {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
 	mtcContents := make([]mtc.Content, 0)
-	for _, c := range m.ContentMap {
-		mtcContents = append(mtcContents, c)
+	for _, k := range keys {
+		mtcContents = append(mtcContents, m.ContentMap[k])
 	}
 
 	return mtcContents
