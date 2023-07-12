@@ -2,6 +2,7 @@ package mtreecomp
 
 import (
 	"fmt"
+	"hash"
 	"strconv"
 	"strings"
 	"sync"
@@ -15,7 +16,7 @@ import (
 
 type MerkleTreeComponent struct {
 	mapMTree      map[string]types.MerkleTree
-	newMerkleTree func(contents []types.KVScontent) (types.MerkleTree, error)
+	newMerkleTree func(contents []types.KVScontent, hashStrategy func() hash.Hash) (types.MerkleTree, error)
 }
 
 var once sync.Once
@@ -44,7 +45,8 @@ func GetMerkleTreeComponent() (*MerkleTreeComponent, error) {
 func NewMerkleTreeComponent() (*MerkleTreeComponent, error) {
 	return &MerkleTreeComponent{
 		mapMTree:      make(map[string]types.MerkleTree),
-		newMerkleTree: mtreeimpl.NewMerkleTreeCbergoon,
+		newMerkleTree: mtreeimpl.NewTree,
+		// newMerkleTree: mtreeimpl.NewMerkleTreeCbergoon,
 	}, nil
 }
 
@@ -79,7 +81,7 @@ func (m *MerkleTreeComponent) ApplyUpdates(batch *statedb.UpdateBatch, height *v
 		mtree, found := m.mapMTree[ns]
 
 		if !found {
-			newMTree, err := m.newMerkleTree([]types.KVScontent{})
+			newMTree, err := m.newMerkleTree([]types.KVScontent{}, nil)
 			if err != nil {
 				return err
 			}

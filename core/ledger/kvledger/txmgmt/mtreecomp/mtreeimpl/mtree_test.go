@@ -19,8 +19,11 @@ func Setup(t *testing.T) (types.MerkleTree, []types.KVScontent) {
 	list = append(list, types.KVScontent{Key: "Hola", Value: []byte("hey")})
 
 	// Create a new Merkle Tree from the list of Content
-	tree, err := NewMerkleTreeCbergoon(list)
+	// tree, err := NewMerkleTreeCbergoon(list)
+	tree, err := NewTree(list, nil)
 	require.NoError(t, err)
+
+	printMerkleTree(tree.(*MerkleTree))
 	return tree, list
 }
 
@@ -37,6 +40,7 @@ func TestAdd(t *testing.T) {
 	tree.Add(newContent)
 	mr := tree.GetMerkleRoot()
 	merklepath, err := tree.GetMerklePath(newContent)
+	require.NoError(t, err)
 	log.Printf("update %v, mr: %x, mp: %v", newContent, mr, merklepath)
 	res, err := VerifyMerklePath(newContent, merklepath, mr, sha256.New)
 	require.NoError(t, err)
@@ -63,6 +67,7 @@ func TestDel(t *testing.T) {
 
 	// check for merkle path
 	merklepath, err := tree.GetMerklePath(list[2])
+	require.NoError(t, err)
 	res, err := VerifyMerklePath(list[2], merklepath, mr2, sha256.New)
 	require.NoError(t, err)
 	require.False(t, res)
@@ -90,6 +95,7 @@ func TestUpdate(t *testing.T) {
 
 	// verify merkle path
 	merklepath, err := tree.GetMerklePath(updateContent)
+	require.NoError(t, err)
 	res, err := VerifyMerklePath(updateContent, merklepath, mr2, sha256.New)
 	require.NoError(t, err)
 	require.True(t, res)
@@ -143,6 +149,7 @@ func TestMultiple(t *testing.T) {
 	require.NoError(t, err)
 	mr = tree.GetMerkleRoot()
 	merklepath, err = tree.GetMerklePath(updateContent)
+	require.NoError(t, err)
 	log.Printf("update %v, mr: %x, mp: %v", updateContent, mr, merklepath)
 	res, err = VerifyMerklePath(updateContent, merklepath, mr, sha256.New)
 	require.NoError(t, err)
@@ -154,6 +161,7 @@ func TestMultiple(t *testing.T) {
 	require.NoError(t, err)
 	mr = tree.GetMerkleRoot()
 	merklepath, err = tree.GetMerklePath(deleteContent)
+	require.NoError(t, err)
 	log.Printf("delete %v, mr: %x, mp: %v", deleteContent, mr, merklepath)
 	res, err = VerifyMerklePath(deleteContent, merklepath, mr, sha256.New)
 	require.NoError(t, err)

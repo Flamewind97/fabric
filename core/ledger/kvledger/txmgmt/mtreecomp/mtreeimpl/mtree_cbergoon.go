@@ -3,6 +3,7 @@ package mtreeimpl
 import (
 	"bytes"
 	"errors"
+	"hash"
 	"sort"
 
 	mtc "github.com/cbergoon/merkletree"
@@ -41,7 +42,7 @@ type MerkleTreeCbergoon struct {
 	ContentMap map[string]mtc.Content
 }
 
-func NewMerkleTreeCbergoon(contents []types.KVScontent) (types.MerkleTree, error) {
+func NewMerkleTreeCbergoon(contents []types.KVScontent, hashStrategy func() hash.Hash) (types.MerkleTree, error) {
 	mtree := &MerkleTreeCbergoon{
 		ContentMap: map[string]mtc.Content{},
 	}
