@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"hash"
+	"sync"
 
 	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/mtreecomp/types"
 )
@@ -54,6 +55,7 @@ type MerkleTree struct {
 	Root         *Node
 	Leafs        map[string]*Node
 	hashStrategy func() hash.Hash
+	mutex        sync.RWMutex
 }
 
 // NewTree creates a new Merkle Tree using the types.KVScontent cs using the provided hash
@@ -89,11 +91,15 @@ func NewTree(cs []types.KVScontent, hashStrategy func() hash.Hash) (types.Merkle
 
 // Implement GetMerkleRoot
 func (m *MerkleTree) GetMerkleRoot() []byte {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
 	return m.Root.Hash
 }
 
 // Implement GetMerklePath
 func (m *MerkleTree) GetMerklePath(content types.KVScontent) ([]types.MerklePath, error) {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
 	curNode, found := m.Leafs[content.Key]
 	if !found {
 		return []types.MerklePath{}, nil
@@ -124,6 +130,8 @@ func (m *MerkleTree) GetMerklePath(content types.KVScontent) ([]types.MerklePath
 
 // Implement VerifyContent
 func (m *MerkleTree) VerifyContent(content types.KVScontent) (bool, error) {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
 	curNode, found := m.Leafs[content.Key]
 	if !found {
 		return false, nil
@@ -177,6 +185,8 @@ func (m *MerkleTree) Add(content types.KVScontent) error {
 			return err
 		}
 	}
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 
 	// create new node
 	hashKey := m.hashStrategy().Sum([]byte(content.Key))
@@ -278,6 +288,8 @@ func (m *MerkleTree) addNode(curNode, newNode *Node) error {
 
 // Implement Delete
 func (m *MerkleTree) Delete(content types.KVScontent) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 	delNode, found := m.Leafs[content.Key]
 	if found {
 		delete(m.Leafs, content.Key)
@@ -330,6 +342,8 @@ func (m *MerkleTree) Update(content types.KVScontent) error {
 	if !found {
 		return m.Add(content)
 	}
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 	updateContent := content
 	updateNode.C = &updateContent
 	updateNode.Hash, err = updateNode.calculateNodeHash()
