@@ -28,17 +28,13 @@ import (
 	validatorv20 "github.com/hyperledger/fabric/core/committer/txvalidator/v20"
 	"github.com/hyperledger/fabric/core/committer/txvalidator/v20/plugindispatcher"
 	vir "github.com/hyperledger/fabric/core/committer/txvalidator/v20/valinforetriever"
-	"github.com/hyperledger/fabric/core/common/privdata"
 	validation "github.com/hyperledger/fabric/core/handlers/validation/api/state"
 	"github.com/hyperledger/fabric/core/ledger"
 	"github.com/hyperledger/fabric/core/ledger/ledgermgmt"
 	"github.com/hyperledger/fabric/core/transientstore"
-	"github.com/hyperledger/fabric/gossip/api"
-	gossipprivdata "github.com/hyperledger/fabric/gossip/privdata"
 	gossipservice "github.com/hyperledger/fabric/gossip/service"
 	"github.com/hyperledger/fabric/internal/pkg/comm"
 	"github.com/hyperledger/fabric/internal/pkg/peer/orderers"
-	"github.com/hyperledger/fabric/msp"
 	mspmgmt "github.com/hyperledger/fabric/msp/mgmt"
 	"github.com/hyperledger/fabric/protoutil"
 	"github.com/pkg/errors"
@@ -281,27 +277,28 @@ func (p *Peer) createChannel(
 
 	channelconfig.LogSanityChecks(bundle)
 
-	gossipEventer := p.GossipService.NewConfigEventer()
+	fmt.Println("~~~ in createChannel, but this time remove gossip service~~~")
+	// gossipEventer := p.GossipService.NewConfigEventer()
 
-	gossipCallbackWrapper := func(bundle *channelconfig.Bundle) {
-		ac, ok := bundle.ApplicationConfig()
-		if !ok {
-			// TODO, handle a missing ApplicationConfig more gracefully
-			ac = nil
-		}
-		gossipEventer.ProcessConfigUpdate(&gossipSupport{
-			Validator:   bundle.ConfigtxValidator(),
-			Application: ac,
-			Channel:     bundle.ChannelConfig(),
-		})
-		p.GossipService.SuspectPeers(func(identity api.PeerIdentityType) bool {
-			// TODO: this is a place-holder that would somehow make the MSP layer suspect
-			// that a given certificate is revoked, or its intermediate CA is revoked.
-			// In the meantime, before we have such an ability, we return true in order
-			// to suspect ALL identities in order to validate all of them.
-			return true
-		})
-	}
+	// gossipCallbackWrapper := func(bundle *channelconfig.Bundle) {
+	// 	ac, ok := bundle.ApplicationConfig()
+	// 	if !ok {
+	// 		// TODO, handle a missing ApplicationConfig more gracefully
+	// 		ac = nil
+	// 	}
+	// 	gossipEventer.ProcessConfigUpdate(&gossipSupport{
+	// 		Validator:   bundle.ConfigtxValidator(),
+	// 		Application: ac,
+	// 		Channel:     bundle.ChannelConfig(),
+	// 	})
+	// 	p.GossipService.SuspectPeers(func(identity api.PeerIdentityType) bool {
+	// 		// TODO: this is a place-holder that would somehow make the MSP layer suspect
+	// 		// that a given certificate is revoked, or its intermediate CA is revoked.
+	// 		// In the meantime, before we have such an ability, we return true in order
+	// 		// to suspect ALL identities in order to validate all of them.
+	// 		return true
+	// 	})
+	// }
 
 	trustedRootsCallbackWrapper := func(bundle *channelconfig.Bundle) {
 		p.updateTrustedRoots(bundle)
@@ -340,17 +337,21 @@ func (p *Peer) createChannel(
 		cryptoProvider: p.CryptoProvider,
 	}
 
+	fmt.Println("~~~ in createChannel, starting channelconfig newbundleSource~~~")
+
 	channel.bundleSource = channelconfig.NewBundleSource(
 		bundle,
 		ordererSourceCallback,
-		gossipCallbackWrapper,
+		nil, // gossipCallbackWrapper,
 		trustedRootsCallbackWrapper,
 		mspCallback,
 		channel.bundleUpdate,
 	)
 
-	committer := committer.NewLedgerCommitter(l)
-	validator := &txvalidator.ValidationRouter{
+	_ = committer.NewLedgerCommitter(l)
+
+	fmt.Println("~~~ in createChannel, creating validator ~~~")
+	_ = &txvalidator.ValidationRouter{
 		CapabilityProvider: channel,
 		V14Validator: validatorv14.NewTxValidator(
 			cid,
@@ -378,6 +379,7 @@ func (p *Peer) createChannel(
 		),
 	}
 
+	fmt.Println("~~~ in createChannel, p.openStore bundle~~~")
 	// TODO: does someone need to call Close() on the transientStoreFactory at shutdown of the peer?
 	store, err := p.openStore(bundle.ConfigtxValidator().ChannelID())
 	if err != nil {
@@ -385,16 +387,17 @@ func (p *Peer) createChannel(
 	}
 	channel.store = store
 
-	simpleCollectionStore := privdata.NewSimpleCollectionStore(l, deployedCCInfoProvider)
-	p.GossipService.InitializeChannel(bundle.ConfigtxValidator().ChannelID(), ordererSource, store, gossipservice.Support{
-		Validator:       validator,
-		Committer:       committer,
-		CollectionStore: simpleCollectionStore,
-		IdDeserializeFactory: gossipprivdata.IdentityDeserializerFactoryFunc(func(chainID string) msp.IdentityDeserializer {
-			return mspmgmt.GetManagerForChain(chainID)
-		}),
-		CapabilityProvider: channel,
-	})
+	// simpleCollectionStore := privdata.NewSimpleCollectionStore(l, deployedCCInfoProvider)
+	// p.GossipService.InitializeChannel(bundle.ConfigtxValidator().ChannelID(), ordererSource, store, gossipservice.Support{
+	// 	Validator:       validator,
+	// 	Committer:       committer,
+	// 	CollectionStore: simpleCollectionStore,
+	// 	IdDeserializeFactory: gossipprivdata.IdentityDeserializerFactoryFunc(func(chainID string) msp.IdentityDeserializer {
+	// 		return mspmgmt.GetManagerForChain(chainID)
+	// 	}),
+	// 	CapabilityProvider: channel,
+	// })
+	fmt.Println("~~~ in createChannel, create complete~~~")
 
 	p.mutex.Lock()
 	defer p.mutex.Unlock()

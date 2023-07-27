@@ -43,7 +43,9 @@ func NewBundleSource(bundle *Bundle, callbacks ...BundleActor) *BundleSource {
 func (bs *BundleSource) Update(newBundle *Bundle) {
 	bs.bundle.Store(newBundle)
 	for _, callback := range bs.callbacks {
-		callback(newBundle)
+		if callback != nil {
+			callback(newBundle)
+		}
 	}
 }
 

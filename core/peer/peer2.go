@@ -98,7 +98,7 @@ func NewTestPeer2(t *testing.T) (*Peer, func()) {
 	return peerInstance, cleanup
 }
 
-func NewTestPeerLight(t *testing.T) (*Peer, func()) {
+func NewTestPeerLight2(t *testing.T) (*Peer, func()) {
 	tempdir, err := ioutil.TempDir("", "peer-test")
 	require.NoError(t, err, "failed to create temporary directory")
 
@@ -123,11 +123,63 @@ func NewTestPeerLight(t *testing.T) (*Peer, func()) {
 	ledgerMgr, err := constructLedgerMgrWithTestDefaults2(filepath.Join(tempdir, "ledgersData"))
 	require.NoError(t, err, "failed to create ledger manager")
 
-	require.NoError(t, err)
 	transientStoreProvider, err := transientstore.NewStoreProvider(
 		filepath.Join(tempdir, "transientstore"),
 	)
 	require.NoError(t, err)
+	peerInstance := &Peer{
+		GossipService:  nil,
+		StoreProvider:  transientStoreProvider,
+		LedgerMgr:      ledgerMgr,
+		CryptoProvider: cryptoProvider,
+	}
+
+	cleanup := func() {
+		ledgerMgr.Close()
+		os.RemoveAll(tempdir)
+	}
+	return peerInstance, cleanup
+}
+
+// below is for the real
+
+func NewTestPeerLight() (*Peer, func()) {
+	tempdir, err := ioutil.TempDir("", "peer-test")
+	if err != nil {
+		panic(fmt.Sprintf("New Fabric Peer Light, failed to create temporary directory, %v", err))
+	}
+
+	// Initialize gossip service
+	cryptoProvider, err := sw.NewDefaultSecurityLevelWithKeystore(sw.NewDummyKeyStore())
+	if err != nil {
+		panic(fmt.Sprintf("New Fabric Peer Light, failed to create cryptoProvider, %v", err))
+	}
+
+	var defaultDeliverClientDialOpts []grpc.DialOption
+	defaultDeliverClientDialOpts = append(
+		defaultDeliverClientDialOpts,
+		grpc.WithBlock(),
+		grpc.WithDefaultCallOptions(
+			grpc.MaxCallRecvMsgSize(comm.DefaultMaxRecvMsgSize),
+			grpc.MaxCallSendMsgSize(comm.DefaultMaxSendMsgSize),
+		),
+	)
+	defaultDeliverClientDialOpts = append(
+		defaultDeliverClientDialOpts,
+		comm.ClientKeepaliveOptions(comm.DefaultKeepaliveOptions)...,
+	)
+
+	ledgerMgr, err := constructLedgerMgrWithTestDefaults2(filepath.Join(tempdir, "ledgersData"))
+	if err != nil {
+		panic(fmt.Sprintf("New Fabric Peer Light, failed to create ledger manager, %v", err))
+	}
+
+	transientStoreProvider, err := transientstore.NewStoreProvider(
+		filepath.Join(tempdir, "transientstore"),
+	)
+	if err != nil {
+		panic(fmt.Sprintf("New Fabric Peer Light, failed to create transientstore, %v", err))
+	}
 	peerInstance := &Peer{
 		GossipService:  nil,
 		StoreProvider:  transientStoreProvider,
