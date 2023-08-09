@@ -337,8 +337,6 @@ func (p *Peer) createChannel(
 		cryptoProvider: p.CryptoProvider,
 	}
 
-	fmt.Println("~~~ in createChannel, starting channelconfig newbundleSource~~~")
-
 	channel.bundleSource = channelconfig.NewBundleSource(
 		bundle,
 		ordererSourceCallback,
@@ -350,7 +348,6 @@ func (p *Peer) createChannel(
 
 	_ = committer.NewLedgerCommitter(l)
 
-	fmt.Println("~~~ in createChannel, creating validator ~~~")
 	_ = &txvalidator.ValidationRouter{
 		CapabilityProvider: channel,
 		V14Validator: validatorv14.NewTxValidator(

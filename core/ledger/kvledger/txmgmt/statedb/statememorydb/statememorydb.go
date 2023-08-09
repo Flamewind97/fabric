@@ -38,8 +38,7 @@ type VersionedDBProvider struct {
 
 // NewVersionedDBProvider instantiates VersionedDBProvider
 func NewVersionedDBProvider(dbPath string) (*VersionedDBProvider, error) {
-	logger.Debugf("constructing VersionedDBProvider dbPath=%s", dbPath)
-	fmt.Printf("### In statememorydb, constructin VersionedDBprovider dbPath=%s, but will not use it ###\n", dbPath)
+	logger.Debugf("constructing statememorydb VersionedDBProvider dbPath=%s, but will not use it", dbPath)
 
 	return &VersionedDBProvider{}, nil
 }
@@ -55,7 +54,7 @@ func (provider *VersionedDBProvider) ImportFromSnapshot(
 	savepoint *version.Height,
 	itr statedb.FullScanIterator,
 ) error {
-	fmt.Printf("### In State Memorydb.go, ImportFromSnapshot, dbname=%s, savepoint=%v ###\n", dbName, savepoint)
+	logger.Debugf("In State Memorydb.go, ImportFromSnapshot, dbname=%s, savepoint=%v", dbName, savepoint)
 	_ = newVersionedDB(dbName)
 	return nil
 	// return vdb.importState(itr, savepoint)
@@ -109,10 +108,9 @@ func (vdb *versionedDB) BytesKeySupported() bool {
 
 // GetState implements method in VersionedDB interface
 func (vdb *versionedDB) GetState(namespace string, key string) (*statedb.VersionedValue, error) {
-	logger.Debugf("GetState(). ns=%s, key=%s", namespace, key)
+	logger.Debugf("In State Memorydb.go, GetState(). ns=%s, key=%s", namespace, key)
 	encodekey := hex.EncodeToString(encodeDataKey(namespace, key))
-	fmt.Printf("### In State Memorydb.go, GetState, ns=%s, key=%s, encodekey=%s ###\n", namespace, key, encodekey)
-	dbVal, _ := vdb.db[encodekey]
+	dbVal := vdb.db[encodekey]
 	if dbVal == nil {
 		return nil, nil
 	}
@@ -186,14 +184,14 @@ func (vdb *versionedDB) ExecuteQueryWithPagination(namespace, query, bookmark st
 
 // ApplyUpdates implements method in VersionedDB interface
 func (vdb *versionedDB) ApplyUpdates(batch *statedb.UpdateBatch, height *version.Height) error {
-	fmt.Printf("### In statememorydb.go/ApplyUpdates, height=%s ###\n", height)
+	logger.Debugf("In statememorydb.go/ApplyUpdates, height=%s", height)
 
 	namespaces := batch.GetUpdatedNamespaces()
 	for _, ns := range namespaces {
 		updates := batch.GetUpdates(ns)
 		for k, vv := range updates {
 			dataKey := hex.EncodeToString(encodeDataKey(ns, k))
-			fmt.Printf("### store: ns=%s, key=%s, datakey=%s ###\n", ns, k, dataKey)
+			logger.Debugf("store: ns=%s, key=%s, datakey=%s ###\n", ns, k, dataKey)
 			if vv.Value == nil {
 				delete(vdb.db, dataKey)
 			} else {

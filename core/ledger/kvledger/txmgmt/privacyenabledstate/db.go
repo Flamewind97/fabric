@@ -8,7 +8,6 @@ package privacyenabledstate
 
 import (
 	"encoding/base64"
-	"fmt"
 	"strings"
 
 	"github.com/hyperledger/fabric-lib-go/healthz"
@@ -102,7 +101,6 @@ func (p *DBProvider) RegisterHealthChecker() error {
 
 // GetDBHandle gets a handle to DB for a given id, i.e., a channel
 func (p *DBProvider) GetDBHandle(id string, chInfoProvider channelInfoProvider) (*DB, error) {
-	fmt.Println("### In GetDBHandle ###")
 	vdb, err := p.VersionedDBProvider.GetDBHandle(id, &namespaceProvider{chInfoProvider})
 	if err != nil {
 		return nil, err
