@@ -180,10 +180,7 @@ func (m *MerkleTree) VerifyContent(content types.KVScontent) (bool, error) {
 func (m *MerkleTree) Add(content types.KVScontent) error {
 	_, found := m.Leafs[content.Key]
 	if found {
-		err := m.Update(content)
-		if err != nil {
-			return err
-		}
+		return m.Update(content)
 	}
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
@@ -340,7 +337,7 @@ func (m *MerkleTree) Update(content types.KVScontent) error {
 	var err error
 	updateNode, found := m.Leafs[content.Key]
 	if !found {
-		return m.Add(content)
+		return fmt.Errorf("merkle tree update failed, key %s not found", content.Key)
 	}
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
@@ -396,7 +393,7 @@ func leadingZeros(b byte) int {
 	return count
 }
 
-func printMerkleTree(tree *MerkleTree) {
+func PrintMerkleTree(tree *MerkleTree) {
 	printNode(tree.Root, "", true)
 }
 
@@ -404,26 +401,31 @@ func printNode(node *Node, prefix string, isTail bool) {
 	fmt.Printf("%s%s%s\n", prefix, getPrefix(isTail), getNodeString(node))
 
 	if node.Left != nil {
-		printNode(node.Left, prefix+getPrefix(isTail)+"   ", false)
+		printNode(node.Left, prefix+getPrefix(isTail)+" ", false)
 	}
 
 	if node.Right != nil {
-		printNode(node.Right, prefix+getPrefix(isTail)+"   ", true)
+		printNode(node.Right, prefix+getPrefix(isTail)+" ", true)
 	}
 }
 
 func getPrefix(isTail bool) string {
 	if isTail {
-		return "└── "
+		return "└ "
 	}
-	return "├── "
+	return "├ "
 }
 
 func getNodeString(node *Node) string {
 	if node.Parent == nil {
-		return fmt.Sprintf("Root: %x", node.Hash)
+		return fmt.Sprintf("Root: %x", node.Hash[:8])
 	} else if node.leaf {
-		return fmt.Sprintf("Leaf: key: %s, value: %x", node.C.Key, node.C.Value)
+		valueLen := len(node.C.Value)
+		outputLen := valueLen
+		if outputLen > 8 {
+			outputLen = 8
+		}
+		return fmt.Sprintf("Leaf: key: %s, value: %x", node.C.Key, node.C.Value[:outputLen])
 	}
-	return fmt.Sprintf("Node: %x", node.Hash)
+	return fmt.Sprintf("Node: %x", node.Hash[:8])
 }

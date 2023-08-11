@@ -23,7 +23,7 @@ func Setup(t *testing.T) (types.MerkleTree, []types.KVScontent) {
 	tree, err := NewTree(list, nil)
 	require.NoError(t, err)
 
-	printMerkleTree(tree.(*MerkleTree))
+	PrintMerkleTree(tree.(*MerkleTree))
 	return tree, list
 }
 
@@ -45,6 +45,20 @@ func TestAdd(t *testing.T) {
 	res, err := VerifyMerklePath(newContent, merklepath, mr, sha256.New)
 	require.NoError(t, err)
 	require.True(t, res)
+
+	PrintMerkleTree(tree.(*MerkleTree))
+
+	// add same key twice
+	newContent2 := types.KVScontent{Key: "Nihao", Value: []byte("hallo2")}
+	tree.Add(newContent2)
+	mr = tree.GetMerkleRoot()
+	merklepath, err = tree.GetMerklePath(newContent2)
+	require.NoError(t, err)
+	log.Printf("update %v, mr: %x, mp: %v", newContent2, mr, merklepath)
+	res, err = VerifyMerklePath(newContent2, merklepath, mr, sha256.New)
+	require.NoError(t, err)
+	require.True(t, res)
+	PrintMerkleTree(tree.(*MerkleTree))
 }
 
 func TestDel(t *testing.T) {

@@ -51,7 +51,7 @@ func (m *MerklePeerWrapper) GetState(namespace string, key string) ([]byte, erro
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("namespace: %s, key: %s, Merkle Path: %v", namespace, key, mpath)
+	// fmt.Printf("namespace: %s, key: %s, Merkle Path: %v", namespace, key, mpath)
 
 	// Add merkle path into the return value.
 	mv := MerkleValue{

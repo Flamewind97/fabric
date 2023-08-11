@@ -26,7 +26,7 @@ func (s *MerkleRest) signResponse([]byte) ([]byte, error) {
 
 func (s *MerkleRest) GetMerkleRoot(namespace string) (*types.SignedMerkleRootResponse, error) {
 	mroot, err := s.mtci.GetMerkleRoot(namespace)
-	fmt.Printf("MerkleServer get merkle root namespace: %s, mroot: %x\n", namespace, mroot)
+	// fmt.Printf("MerkleServer get merkle root namespace: %s, mroot: %x\n", namespace, mroot)
 	if err != nil {
 		return nil, err
 	}
