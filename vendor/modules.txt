@@ -34,6 +34,9 @@ github.com/alecthomas/template/parse
 github.com/alecthomas/units
 # github.com/beorn7/perks v1.0.1
 github.com/beorn7/perks/quantile
+# github.com/cbergoon/merkletree v0.2.0
+## explicit
+github.com/cbergoon/merkletree
 # github.com/cespare/xxhash/v2 v2.1.1
 github.com/cespare/xxhash/v2
 # github.com/containerd/continuity v0.0.0-20190426062206-aaeac12a7ffc

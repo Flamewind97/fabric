@@ -18,6 +18,7 @@ import (
 	"github.com/hyperledger/fabric/core/ledger/cceventmgmt"
 	"github.com/hyperledger/fabric/core/ledger/internal/version"
 	"github.com/hyperledger/fabric/core/ledger/kvledger/bookkeeping"
+	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/mtreecomp/mtreecomp"
 	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/statedb"
 	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/statedb/statecouchdb"
 	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/statedb/stateleveldb"
@@ -262,7 +263,14 @@ func (s *DB) ApplyPrivacyAwareUpdates(updates *UpdateBatch, height *version.Heig
 	if err := s.metadataHint.setMetadataUsedFlag(updates); err != nil {
 		return err
 	}
-	return s.VersionedDB.ApplyUpdates(combinedUpdates.UpdateBatch, height)
+	if err := s.VersionedDB.ApplyUpdates(combinedUpdates.UpdateBatch, height); err != nil {
+		return err
+	}
+	mtc, err := mtreecomp.GetMerkleTreeComponent()
+	if err != nil {
+		return err
+	}
+	return mtc.ApplyUpdates(combinedUpdates.UpdateBatch, height)
 }
 
 // GetStateMetadata implements corresponding function in interface DB. This implementation provides
