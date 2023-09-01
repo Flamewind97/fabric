@@ -11,13 +11,24 @@ import (
 	"github.com/hyperledger/fabric/core/config/configtest"
 	"github.com/hyperledger/fabric/msp"
 	"github.com/hyperledger/fabric/msp/mgmt"
+	"github.com/hyperledger/fabric/orderer/common/localconfig"
 )
 
 // LoadTestMSPSetup sets up the local MSP
 // and a chain MSP for the default chain
 func LoadMSPSetupForTesting() error {
-	dir := configtest.GetDevMspDir()
-	conf, err := msp.GetLocalMspConfig(dir, nil, "SampleOrg")
+	localconf, err := localconfig.Load()
+	if err != nil {
+		panic(err)
+	}
+	localMSPDir := localconf.General.LocalMSPDir
+	BCCSP := localconf.General.BCCSP
+	localMSPID := localconf.General.LocalMSPID
+	conf, err := msp.GetLocalMspConfig(localMSPDir, BCCSP, localMSPID)
+
+	// dir := configtest.GetDevMspDir()
+	// conf, err := msp.GetLocalMspConfig(dir, nil, "SampleOrg")
+
 	if err != nil {
 		return err
 	}

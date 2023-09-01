@@ -115,6 +115,9 @@ func (c *ConfigParser) getConfigFile() string {
 	}
 
 	c.configFile = c.findConfigFile()
+	if c.configFile == "" {
+		c.configFile = "orderer.yaml"
+	}
 	return c.configFile
 }
 

@@ -19,8 +19,7 @@ import (
 	"github.com/hyperledger/fabric/core/ledger/internal/version"
 	"github.com/hyperledger/fabric/core/ledger/kvledger/bookkeeping"
 	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/statedb"
-	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/statedb/statecouchdb"
-	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/statedb/stateleveldb"
+	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/statedb/statememorydb"
 	"github.com/hyperledger/fabric/core/ledger/util"
 	"github.com/pkg/errors"
 )
@@ -63,15 +62,18 @@ func NewDBProvider(
 	var vdbProvider statedb.VersionedDBProvider
 	var err error
 
-	if stateDBConf != nil && stateDBConf.StateDatabase == ledger.CouchDB {
-		if vdbProvider, err = statecouchdb.NewVersionedDBProvider(stateDBConf.CouchDB, metricsProvider, sysNamespaces); err != nil {
-			return nil, err
-		}
-	} else {
-		if vdbProvider, err = stateleveldb.NewVersionedDBProvider(stateDBConf.LevelDBPath); err != nil {
-			return nil, err
-		}
-	}
+	// TODO: add as a options like below.
+	vdbProvider, err = statememorydb.NewVersionedDBProvider("dbpath")
+
+	// if stateDBConf != nil && stateDBConf.StateDatabase == ledger.CouchDB {
+	// 	if vdbProvider, err = statecouchdb.NewVersionedDBProvider(stateDBConf.CouchDB, metricsProvider, sysNamespaces); err != nil {
+	// 		return nil, err
+	// 	}
+	// } else {
+	// 	if vdbProvider, err = stateleveldb.NewVersionedDBProvider(stateDBConf.LevelDBPath); err != nil {
+	// 		return nil, err
+	// 	}
+	// }
 
 	dbProvider := &DBProvider{
 		VersionedDBProvider: vdbProvider,
@@ -262,6 +264,7 @@ func (s *DB) ApplyPrivacyAwareUpdates(updates *UpdateBatch, height *version.Heig
 	if err := s.metadataHint.setMetadataUsedFlag(updates); err != nil {
 		return err
 	}
+
 	return s.VersionedDB.ApplyUpdates(combinedUpdates.UpdateBatch, height)
 }
 

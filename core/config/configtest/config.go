@@ -7,11 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package configtest
 
 import (
-	"bytes"
-	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -53,16 +50,26 @@ func GetDevConfigDir() string {
 }
 
 func gopathDevConfigDir() (string, error) {
-	buf := bytes.NewBuffer(nil)
-	cmd := exec.Command("go", "env", "GOPATH")
-	cmd.Stdout = buf
-	if err := cmd.Run(); err != nil {
-		return "", err
-	}
+	// buf := bytes.NewBuffer(nil)
+	// cmd := exec.Command("go", "env", "GOPATH")
+	// cmd.Stdout = buf
+	// if err := cmd.Run(); err != nil {
+	// 	return "", err
+	// }
 
-	gopath := strings.TrimSpace(buf.String())
-	for _, p := range filepath.SplitList(gopath) {
-		devPath := filepath.Join(p, "src/github.com/hyperledger/fabric/sampleconfig")
+	// gopath := strings.TrimSpace(buf.String())
+
+	FPC_PATH := os.Getenv("FPC_PATH")
+	if FPC_PATH != "" {
+		gopath := filepath.Join(FPC_PATH, "../../../../")
+		for _, p := range filepath.SplitList(gopath) {
+			devPath := filepath.Join(p, "src/github.com/hyperledger/fabric/sampleconfig")
+			if dirExists(devPath) {
+				return devPath, nil
+			}
+		}
+	} else {
+		devPath := os.Getenv("DEV_PATH")
 		if dirExists(devPath) {
 			return devPath, nil
 		}
@@ -72,17 +79,23 @@ func gopathDevConfigDir() (string, error) {
 }
 
 func gomodDevConfigDir() (string, error) {
-	buf := bytes.NewBuffer(nil)
-	cmd := exec.Command("go", "env", "GOMOD")
-	cmd.Stdout = buf
+	// buf := bytes.NewBuffer(nil)
+	// cmd := exec.Command("go", "env", "GOMOD")
+	// cmd.Stdout = buf
 
-	if err := cmd.Run(); err != nil {
-		return "", err
-	}
+	// if err := cmd.Run(); err != nil {
+	// 	return "", err
+	// }
 
-	modFile := strings.TrimSpace(buf.String())
+	// modFile := strings.TrimSpace(buf.String())
+	// if modFile == "" {
+	// 	return "", errors.New("not a module or not in module mode")
+	// }
+
+	goEnvGoMod := os.Getenv("GO_ENV_GOMOD")
+	modFile := strings.TrimSpace(goEnvGoMod)
 	if modFile == "" {
-		return "", errors.New("not a module or not in module mode")
+		modFile = filepath.Join(os.Getenv("FPC_PATH"), "tle_go/go.mod")
 	}
 
 	devPath := filepath.Join(filepath.Dir(modFile), "sampleconfig")

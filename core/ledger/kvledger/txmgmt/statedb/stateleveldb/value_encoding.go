@@ -23,6 +23,10 @@ func encodeValue(v *statedb.VersionedValue) ([]byte, error) {
 	)
 }
 
+func EncodeValue(v *statedb.VersionedValue) ([]byte, error) {
+	return encodeValue(v)
+}
+
 // decodeValue decodes the statedb value bytes
 func decodeValue(encodedValue []byte) (*statedb.VersionedValue, error) {
 	dbValue := &DBValue{}
@@ -41,4 +45,8 @@ func decodeValue(encodedValue []byte) (*statedb.VersionedValue, error) {
 		val = []byte{}
 	}
 	return &statedb.VersionedValue{Version: ver, Value: val, Metadata: metadata}, nil
+}
+
+func DecodeValue(encodedValue []byte) (*statedb.VersionedValue, error) {
+	return decodeValue(encodedValue)
 }

@@ -38,9 +38,12 @@ func newLedgerKeyID(cc, coll, key string) *ledgerKeyID {
 // dependencies at a vscc scope, where transactions are validated on a per-
 // namespace basis:
 // -) the pair waitForDepInserted() / signalDepInserted() is used to sync on
-//    insertion of dependencies
+//
+//	insertion of dependencies
+//
 // -) the pair waitForAndRetrieveValidationResult() / signalValidationResult()
-//    is used to sync on the validation results for a given namespace
+//
+//	is used to sync on the validation results for a given namespace
 type txDependency struct {
 	mutex               sync.Mutex
 	cond                *sync.Cond
@@ -327,12 +330,13 @@ func (m *KeyLevelValidationParameterManagerImpl) GetValidationParameterForKey(cc
 			return nil, err
 		}
 	} else {
-		mdMap, err = state.GetPrivateDataMetadataByHash(cc, coll, []byte(key))
-		if err != nil {
-			err = errors.WithMessagef(err, "could not retrieve metadata for %s:%s:%x", cc, coll, []byte(key))
-			logger.Errorf(err.Error())
-			return nil, err
-		}
+		// mdMap, err = state.GetPrivateDataMetadataByHash(cc, coll, []byte(key))
+		// if err != nil {
+		// 	fmt.Printf("---in vpmanagerimpl.go GetValidationParameterForKey GetPrivateDataMetadataByHash failed---\n")
+		// 	err = errors.WithMessagef(err, "could not retrieve metadata for %s:%s:%x", cc, coll, []byte(key))
+		// 	logger.Errorf(err.Error())
+		// 	return nil, err
+		// }
 	}
 
 	policy, err := m.PolicyTranslator.Translate(mdMap[pb.MetaDataKeys_VALIDATION_PARAMETER.String()])
